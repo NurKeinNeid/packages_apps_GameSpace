@@ -40,7 +40,6 @@
     <string name="notifications_title">Benachrichtigungen</string>
     <string name="notifications_hide">Ausblenden</string>
     <string name="notifications_headsup">Pop-up</string>
-    <string name="notifications_island">Island</string>
     <string name="notifications_danmaku">Danmaku</string>
     <string name="stay_awake_title">Bildschirm wach halten</string>
     <string name="stay_awake_summary">Bildschirm während des Spiels wach halten</string>
@@ -85,6 +84,5 @@
     <string name="in_game_notifications_title">Benachrichtigungsmodus</string>
     <string name="in_game_notifications_hide">Nicht anzeigen</string>
     <string name="in_game_notifications_headsup">Als Pop-up anzeigen</string>
-    <string name="in_game_notifications_island">Als Island-Benachrichtigung anzeigen</string>
     <string name="in_game_notifications_danmaku">Als Danmaku anzeigen</string>
 </resources>

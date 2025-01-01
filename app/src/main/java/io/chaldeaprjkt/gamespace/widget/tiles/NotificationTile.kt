@@ -32,22 +32,14 @@ class NotificationTile @JvmOverloads constructor(
             when (value) {
                 NO_NOTIFICATION -> {
                     systemSettings.headsUp = false
-                    systemSettings.island = false
                     summary?.text = context.getString(R.string.notifications_hide)
                 }
                 HEADS_UP_MODE -> {
                     systemSettings.headsUp = true
-                    systemSettings.island = false
                     summary?.text = context.getString(R.string.notifications_headsup)
-                }
-                ISLAND_MODE -> {
-                    systemSettings.headsUp = true
-                    systemSettings.island = true
-                    summary?.text = context.getString(R.string.notifications_island)
                 }
                 DANMAKU_MODE -> {
                     systemSettings.headsUp = false
-                    systemSettings.island = false
                     summary?.text = context.getString(R.string.notifications_danmaku)
                 }
             }
@@ -69,7 +61,6 @@ class NotificationTile @JvmOverloads constructor(
     companion object {
         private const val NO_NOTIFICATION = 0
         private const val HEADS_UP_MODE = 1
-        private const val ISLAND_MODE = 2
-        private const val DANMAKU_MODE = 3
+        private const val DANMAKU_MODE = 2
     }
 }
