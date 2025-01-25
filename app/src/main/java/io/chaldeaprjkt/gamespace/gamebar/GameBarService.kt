@@ -162,9 +162,20 @@ class GameBarService : Hilt_GameBarService() {
     }
 
     override fun onDestroy() {
-        danmakuService.destroy()
-        onGameLeave()
-        super.onDestroy()
+        try {
+            danmakuService.destroy()
+            handler.removeCallbacksAndMessages(null)  // Clean up any pending handlers
+            if (::rootPanelView.isInitialized && rootPanelView.isAttachedToWindow) {
+                wm.removeViewImmediate(rootPanelView)
+            }
+            if (::rootBarView.isInitialized && rootBarView.isAttachedToWindow) {
+                wm.removeViewImmediate(rootBarView)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            super.onDestroy()
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {

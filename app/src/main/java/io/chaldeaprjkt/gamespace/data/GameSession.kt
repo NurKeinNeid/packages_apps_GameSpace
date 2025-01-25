@@ -51,38 +51,81 @@ class GameSession @Inject constructor(
             .apply()
 
     fun register(sessionName: String) {
-        if (state?.packageName != sessionName) unregister()
+        try {
+            val previousState = state
+            state = SessionState(
+                packageName = sessionName,
+                autoBrightness = systemSettings.autoBrightness,
+                threeScreenshot = systemSettings.threeScreenshot,
+                headsUp = systemSettings.headsUp,
+                ringerMode = audioManager.ringerModeInternal,
+                doubleTapToSleep = systemSettings.doubleTapToSleep,
+                fastChargeDisabler = systemSettings.fastChargeDisabler as? Boolean
+            )
 
-        state = SessionState(
-            packageName = sessionName,
-            autoBrightness = systemSettings.autoBrightness,
-            threeScreenshot = systemSettings.threeScreenshot,
-            headsUp = systemSettings.headsUp,
-            ringerMode = audioManager.ringerModeInternal,
-            doubleTapToSleep = systemSettings.doubleTapToSleep,
-            fastChargeDisabler = systemSettings.fastChargeDisabler as? Boolean
-        )
+            // Save previous state for recovery
+            db.edit().putString(KEY_PREVIOUS_STATE, gson.toJson(previousState)).apply()
+
+            // Apply settings with error handling
+            applySettings()
+        } catch (e: Exception) {
+            // Restore previous state if available
+            restorePreviousState()
+            throw e
+        }
+    }
+
+    private fun applySettings() {
         if (appSettings.noAutoBrightness) {
             systemSettings.autoBrightness = false
         }
         if (appSettings.noThreeScreenshot) {
             systemSettings.threeScreenshot = false
         }
-        if (appSettings.doubleTaptoSleep){
-           systemSettings.doubleTapToSleep = false
+        if (appSettings.doubleTaptoSleep) {
+            systemSettings.doubleTapToSleep = false
         }
         if (appSettings.fastChargeDisabler) {
             systemSettings.fastChargeDisabler = false
         }
-        if (appSettings.notificationsMode == 0 || appSettings.notificationsMode == 3) {
-            systemSettings.headsUp = false
-        } else if (appSettings.notificationsMode == 1) {
-            systemSettings.headsUp = true
-        } else {
-            systemSettings.headsUp = true
+
+        // Handle notifications mode
+        when (appSettings.notificationsMode) {
+            0, 3 -> systemSettings.headsUp = false
+            1, 2 -> systemSettings.headsUp = true
         }
+
+        // Handle ringer mode
         if (appSettings.ringerMode != 3) {
             audioManager.ringerModeInternal = appSettings.ringerMode
+        }
+    }
+
+    private fun restorePreviousState() {
+        db.getString(KEY_PREVIOUS_STATE, null)?.let { previousStateJson ->
+            try {
+                val previousState = gson.fromJson(previousStateJson, SessionState::class.java)
+                previousState.autoBrightness?.let {
+                    systemSettings.autoBrightness = it
+                }
+                previousState.threeScreenshot?.let {
+                    systemSettings.threeScreenshot = it
+                }
+                previousState.headsUp?.let {
+                    systemSettings.headsUp = it
+                }
+                previousState.ringerMode?.let {
+                    audioManager.ringerModeInternal = it
+                }
+                previousState.doubleTapToSleep?.let {
+                    systemSettings.doubleTapToSleep = it
+                }
+                previousState.fastChargeDisabler?.let {
+                    systemSettings.fastChargeDisabler = it
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -114,5 +157,6 @@ class GameSession @Inject constructor(
     companion object {
         const val PREFS_NAME = "persisted_session"
         const val KEY_SAVED_SESSION = "session"
+        private const val KEY_PREVIOUS_STATE = "previous_state"
     }
 }

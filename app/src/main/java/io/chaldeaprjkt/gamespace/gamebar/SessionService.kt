@@ -136,47 +136,86 @@ class SessionService : Hilt_SessionService() {
         try {
             session.unregister()
             if (!::commandIntent.isInitialized) {
-                // something is not right, bailing out
+                Log.e(TAG, "Command intent not initialized")
                 stopSelf()
+                return
             }
+
             val app = commandIntent.getStringExtra(EXTRA_PACKAGE_NAME)
-            app?.let {
-                session.register(it)
-                applyGameModeConfig(it)
-                gameBar.onGameStart()
-                screenUtils.stayAwake = appSettings.stayAwake
-                screenUtils.lockGesture = appSettings.lockGesture
+            if (app == null) {
+                Log.e(TAG, "Package name is null")
+                stopSelf()
+                return
+            }
+
+            scope.launch {
+                try {
+                    session.register(app)
+                    applyGameModeConfig(app)
+                    gameBar.onGameStart()
+                    screenUtils.stayAwake = appSettings.stayAwake
+                    screenUtils.lockGesture = appSettings.lockGesture
+                    callListener.init()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to initialize game session", e)
+                    stopSelf()
+                }
             }
         } catch (e: Exception) {
-            Log.d(TAG, e.toString())
+            Log.e(TAG, "Error in onGameBarReady", e)
+            stopSelf()
         }
-
-        callListener.init()
     }
 
     private fun tryStartFromDeath(): Int {
-        val game = ActivityTaskManager.getService()
-            ?.focusedRootTaskInfo
-            ?.topActivity?.packageName
-            ?: return START_NOT_STICKY
+        try {
+            val taskManager = ActivityTaskManager.getService()
+            if (taskManager == null) {
+                Log.e(TAG, "ActivityTaskManager service is null")
+                return START_NOT_STICKY
+            }
 
-        if (!settings.userGames.any { it.packageName == game }) {
+            val game = taskManager.focusedRootTaskInfo?.topActivity?.packageName
+            if (game == null) {
+                Log.e(TAG, "No focused activity found")
+                return START_NOT_STICKY
+            }
+
+            if (!settings.userGames.any { it.packageName == game }) {
+                Log.d(TAG, "Game $game not in user games list")
+                return START_NOT_STICKY
+            }
+
+            commandIntent = Intent(START).putExtra(EXTRA_PACKAGE_NAME, game)
+            startGameBar()
+            return START_STICKY
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in tryStartFromDeath", e)
             return START_NOT_STICKY
         }
-
-        commandIntent = Intent(START).putExtra(EXTRA_PACKAGE_NAME, game)
-        startGameBar()
-        return START_STICKY
     }
 
     private fun applyGameModeConfig(app: String) {
-        val preferred = settings.userGames.firstOrNull { it.packageName == app }
-            ?.mode ?: GameModeUtils.defaultPreferredMode
-        gameModeUtils.activeGame = settings.userGames.firstOrNull { it.packageName == app }
-        scope.launch {
-            gameManager.getAvailableGameModes(app)
-                .takeIf { it.contains(preferred) }
-                ?.run { gameManager.setGameMode(app, preferred) }
+        try {
+            val preferred = settings.userGames.firstOrNull { it.packageName == app }
+                ?.mode ?: GameModeUtils.defaultPreferredMode
+            
+            gameModeUtils.activeGame = settings.userGames.firstOrNull { it.packageName == app }
+            
+            scope.launch {
+                try {
+                    val availableModes = gameManager.getAvailableGameModes(app)
+                    if (availableModes.contains(preferred)) {
+                        gameManager.setGameMode(app, preferred)
+                    } else {
+                        Log.w(TAG, "Preferred game mode $preferred not available for $app")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to apply game mode for $app", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in applyGameModeConfig", e)
         }
     }
 

@@ -91,6 +91,10 @@ class DanmakuService @Inject constructor(
     private var overlayAlphaAnimator: ValueAnimator? = null
     private var overlayPositionAnimator: ValueAnimator? = null
 
+    init {
+        notificationStack.clear()
+    }
+
     fun init() {
         updateParams()
         registerListener()
@@ -225,6 +229,13 @@ class DanmakuService @Inject constructor(
             windowManager.removeViewImmediate(notificationOverlay)
     }
 
+    private fun queueNotification(text: String) {
+        if (notificationStack.size >= MAX_NOTIFICATION_QUEUE) {
+            notificationStack.removeFirst()
+        }
+        notificationStack.addLast(text)
+    }
+
     private inner class Listener : NotificationListenerService() {
 
         private val postedNotifications = mutableMapOf<String, Long>()
@@ -265,18 +276,14 @@ class DanmakuService @Inject constructor(
 
     companion object {
         private const val TAG = "DanmakuService"
-
         private const val SLIDE_ANIMATION_DISTANCE_FACTOR = 0.5f
-
-        private const val APPEAR_ANIMATION_DURATION = 500L
-        private const val DISPLAY_NOTIFICATION_DURATION = 2000L
-        private const val DISAPPEAR_ANIMATION_DURATION = 300L
-
+        private const val APPEAR_ANIMATION_DURATION = 400L
+        private const val DISPLAY_NOTIFICATION_DURATION = 1500L
+        private const val DISAPPEAR_ANIMATION_DURATION = 200L
         private const val NOTIFICATION_SIZE_LANDSCAPE = 60
         private const val NOTIFICATION_SIZE_PORTRAIT = 60
-
         private const val NOTIFICATION_MAX_WIDTH = 75
-
-        private const val NOTIFICATIONS_MAX_CACHED = 99
+        private const val NOTIFICATIONS_MAX_CACHED = 50
+        private const val MAX_NOTIFICATION_QUEUE = 10
     }
 }
