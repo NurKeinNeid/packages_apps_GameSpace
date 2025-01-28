@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_performance">
+    
+    <target
+        android:name="bolt"
+        android:animation="@animator/performance_bolt_flash" />
+        
+    <target
+        android:name="waves"
+        android:animation="@animator/performance_waves_pulse" />
+</animated-vector> 
