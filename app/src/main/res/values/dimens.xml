@@ -20,4 +20,11 @@
 
     <dimen name="notification_vertical_offset_landscape">48dp</dimen>
     <dimen name="notification_vertical_offset_portrait">36dp</dimen>
+
+    <!-- Material You Settings -->
+    <dimen name="settings_margin">16dp</dimen>
+    <dimen name="settings_category_margin_top">24dp</dimen>
+    <dimen name="settings_preference_margin">8dp</dimen>
+    <dimen name="settings_icon_size">24dp</dimen>
+    <dimen name="settings_corner_radius">28dp</dimen>
 </resources>

@@ -16,7 +16,23 @@
 
 <resources>
 
-    <style name="GameSpaceTheme" parent="Theme.SubSettingsBase" />
+    <style name="GameSpaceTheme" parent="Theme.SubSettingsBase">
+        <!-- Material You theming -->
+        <item name="colorPrimary">@android:color/system_accent1_600</item>
+        <item name="colorPrimaryContainer">@android:color/system_accent1_100</item>
+        <item name="colorSecondary">@android:color/system_accent2_600</item>
+        <item name="colorSecondaryContainer">@android:color/system_accent2_100</item>
+        <item name="android:colorBackground">@android:color/system_neutral1_50</item>
+        <item name="colorSurface">@android:color/system_neutral2_50</item>
+        <item name="colorSurfaceVariant">@android:color/system_neutral2_100</item>
+        <item name="colorOnPrimary">@android:color/system_neutral1_50</item>
+        <item name="colorOnSecondary">@android:color/system_neutral1_900</item>
+        <item name="colorOnBackground">@android:color/system_neutral1_900</item>
+        <item name="colorOnSurface">@android:color/system_neutral1_900</item>
+        
+        <!-- Preference styling -->
+        <item name="preferenceTheme">@style/GameSpacePreferenceTheme</item>
+    </style>
 
     <style name="GameSpaceTheme.GameBar" parent="Theme.SubSettingsBase">
         <item name="android:buttonStyle">@style/GameSpaceTheme.FlatButton</item>
@@ -36,6 +52,32 @@
 
     <style name="GameSpaceTheme.Panel.Tile">
         <item name="android:textColor">@color/onSurface</item>
+    </style>
+
+    <style name="GameSpacePreferenceTheme" parent="@style/PreferenceThemeOverlay">
+        <item name="android:layout_marginStart">@dimen/settings_margin</item>
+        <item name="android:layout_marginEnd">@dimen/settings_margin</item>
+        <item name="preferenceFragmentCompatStyle">@style/GameSpacePreferenceFragment</item>
+        <item name="switchPreferenceCompatStyle">@style/GameSpacePreference.SwitchPreferenceCompat</item>
+        <item name="preferenceCategoryStyle">@style/GameSpacePreference.Category</item>
+    </style>
+
+    <style name="GameSpacePreferenceFragment" parent="@style/PreferenceFragment.Material">
+        <item name="android:clipToPadding">false</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">8dp</item>
+    </style>
+
+    <style name="GameSpacePreference.Category" parent="@style/Preference.Category.Material">
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:layout_marginBottom">8dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.GameSpace.CategoryTitle</item>
+    </style>
+
+    <style name="GameSpacePreference.SwitchPreferenceCompat" parent="@style/Preference.SwitchPreferenceCompat.Material">
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:layout_marginBottom">4dp</item>
+        <item name="android:background">@drawable/preference_background</item>
     </style>
 
 </resources>
