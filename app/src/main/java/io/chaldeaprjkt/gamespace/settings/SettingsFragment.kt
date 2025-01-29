@@ -25,10 +25,12 @@ import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
+import androidx.preference.ListPreference
 import dagger.hilt.android.AndroidEntryPoint
 import io.chaldeaprjkt.gamespace.R
 import io.chaldeaprjkt.gamespace.data.AppSettings
 import io.chaldeaprjkt.gamespace.data.SystemSettings
+import io.chaldeaprjkt.gamespace.data.GameOptimizationManager
 import io.chaldeaprjkt.gamespace.preferences.AppListPreferences
 import io.chaldeaprjkt.gamespace.preferences.appselector.AppSelectorActivity
 import javax.inject.Inject
@@ -41,6 +43,9 @@ import vendor.lineage.fastcharge.V1_0.IFastCharge
 class SettingsFragment : Hilt_SettingsFragment(), Preference.OnPreferenceChangeListener {
     @Inject
     lateinit var settings: SystemSettings
+
+    @Inject
+    lateinit var gameOptimization: GameOptimizationManager
 
     private val TAG = "GameSettingsFragment"
 
@@ -64,10 +69,28 @@ class SettingsFragment : Hilt_SettingsFragment(), Preference.OnPreferenceChangeL
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.root_preferences, rootKey)
-    }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+        // Game Optimization preferences
+        findPreference<SwitchPreferenceCompat>("game_launch_boost")?.apply {
+            isChecked = gameOptimization.isLaunchBoostEnabled
+            onPreferenceChangeListener = this@SettingsFragment
+        }
+
+        findPreference<SwitchPreferenceCompat>("game_memory_management")?.apply {
+            isChecked = gameOptimization.isMemoryManagementEnabled
+            onPreferenceChangeListener = this@SettingsFragment
+        }
+
+        findPreference<ListPreference>("game_load_priority")?.apply {
+            value = gameOptimization.loadPriority
+            onPreferenceChangeListener = this@SettingsFragment
+        }
+
+        findPreference<SwitchPreferenceCompat>("game_cache_management")?.apply {
+            isChecked = gameOptimization.isCacheManagementEnabled
+            onPreferenceChangeListener = this@SettingsFragment
+        }
+
         apps = findPreference(DerpFestSettings.System.GAMESPACE_GAME_LIST)
         apps?.onRegisteredAppClick {
             perAppResult.launch(Intent(context, PerAppSettingsActivity::class.java).apply {
@@ -124,6 +147,22 @@ class SettingsFragment : Hilt_SettingsFragment(), Preference.OnPreferenceChangeL
 
     override fun onPreferenceChange(preference: Preference, newValue: Any?): Boolean {
         when (preference.key) {
+            "game_launch_boost" -> {
+                gameOptimization.isLaunchBoostEnabled = newValue as Boolean
+                return true
+            }
+            "game_memory_management" -> {
+                gameOptimization.isMemoryManagementEnabled = newValue as Boolean
+                return true
+            }
+            "game_load_priority" -> {
+                gameOptimization.loadPriority = newValue as String
+                return true
+            }
+            "game_cache_management" -> {
+                gameOptimization.isCacheManagementEnabled = newValue as Boolean
+                return true
+            }
             DerpFestSettings.System.GAMESPACE_SUPPRESS_FULLSCREEN_INTENT -> {
                 settings.suppressFullscreenIntent = newValue as Boolean
                 return true
