@@ -37,7 +37,7 @@
             android:key="game_memory_management"
             android:title="@string/game_memory_management_title"
             android:summary="@string/game_memory_management_summary"
-            android:defaultValue="true" />
+            android:defaultValue="false" />
 
         <ListPreference
             android:key="game_load_priority"

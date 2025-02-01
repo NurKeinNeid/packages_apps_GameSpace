@@ -30,7 +30,7 @@ class GameOptimizationManager @Inject constructor(
         set(value) = prefs.edit().putBoolean(KEY_LAUNCH_BOOST, value).apply()
 
     var isMemoryManagementEnabled: Boolean
-        get() = prefs.getBoolean(KEY_MEMORY_MANAGEMENT, true)
+        get() = prefs.getBoolean(KEY_MEMORY_MANAGEMENT, false)
         set(value) = prefs.edit().putBoolean(KEY_MEMORY_MANAGEMENT, value).apply()
 
     var loadPriority: String
