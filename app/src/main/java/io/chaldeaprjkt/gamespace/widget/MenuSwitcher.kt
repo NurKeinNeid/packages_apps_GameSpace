@@ -29,7 +29,8 @@ class MenuSwitcher @JvmOverloads constructor(
 
     private val appSettings by lazy { context.entryPointOf<ServiceViewEntryPoint>().appSettings() }
     private val scope = CoroutineScope(Job() + Dispatchers.Main)
-    private val taskManager by lazy { ActivityTaskManager.getService() }
+    private val taskManager by lazy { ActivityTaskManager.getInstance() }
+    private val wm by lazy { context.getSystemService(WindowManager::class.java) }
 
     private val taskFpsCallback = object : TaskFpsCallback() {
         override fun onFpsReported(fps: Float) {
@@ -39,9 +40,6 @@ class MenuSwitcher @JvmOverloads constructor(
         }
     }
 
-    private val wm: WindowManager
-        get() = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
     private val content: TextView?
         get() = findViewById(R.id.menu_content)
 
@@ -49,6 +47,7 @@ class MenuSwitcher @JvmOverloads constructor(
         set(value) {
             setMenuIcon(null)
             field = value
+            updateFrameRateBinding()
         }
 
     var isDragged = false
@@ -64,23 +63,27 @@ class MenuSwitcher @JvmOverloads constructor(
             location > 0 -> R.drawable.ic_arrow_right
             else -> R.drawable.ic_arrow_left
         }.let { setMenuIcon(it) }
-        updateFrameRateBinding()
     }
 
     private fun onFrameUpdated(newValue: Float) = scope.launch {
         DecimalFormat("#").apply {
             roundingMode = RoundingMode.HALF_EVEN
-            content?.text = this.format(newValue)
+            content?.text = format(newValue)
         }
     }
 
     private fun updateFrameRateBinding() {
-        if (showFps) {
-            taskManager?.focusedRootTaskInfo?.taskId?.let {
-                wm.registerTaskFpsCallback(it, Runnable::run, taskFpsCallback)
+        try {
+            if (showFps) {
+                taskManager?.focusedRootTaskInfo?.taskId?.let { taskId ->
+                    wm.registerTaskFpsCallback(taskId, Runnable::run, taskFpsCallback)
+                }
+            } else {
+                wm.unregisterTaskFpsCallback(taskFpsCallback)
             }
-        } else {
-            wm.unregisterTaskFpsCallback(taskFpsCallback)
+        } catch (e: Exception) {
+            // Handle any potential SecurityException or IllegalStateException
+            showFps = false
         }
     }
 
@@ -89,7 +92,11 @@ class MenuSwitcher @JvmOverloads constructor(
             R.drawable.ic_close, R.drawable.ic_drag -> layoutParams.width = 36.dp
             else -> layoutParams.width = LayoutParams.WRAP_CONTENT
         }
-        val ic = icon?.takeIf { !showFps }?.let { resources.getDrawable(it, context.theme) }
+        val ic = icon?.takeIf { !showFps }?.let { 
+            resources.getDrawable(it, context.theme).apply {
+                setTint(content?.currentTextColor ?: 0xFFFFFFFF.toInt())
+            }
+        }
         content?.textScaleX = if (showFps) 1f else 0f
         content?.setCompoundDrawablesRelativeWithIntrinsicBounds(null, ic, null, null)
     }
@@ -101,6 +108,17 @@ class MenuSwitcher @JvmOverloads constructor(
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        wm.unregisterTaskFpsCallback(taskFpsCallback)
+        try {
+            wm.unregisterTaskFpsCallback(taskFpsCallback)
+        } catch (e: Exception) {
+            // Ignore any errors during cleanup
+        }
+        scope.launch {
+            try {
+                scope.coroutineContext[Job]?.cancelChildren()
+            } catch (e: Exception) {
+                // Ignore cancellation errors
+            }
+        }
     }
 }
