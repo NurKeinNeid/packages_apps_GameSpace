@@ -15,7 +15,6 @@
  */
 package io.chaldeaprjkt.gamespace.gamebar
 
-import android.annotation.SuppressLint
 import android.app.ActivityTaskManager
 import android.app.GameManager
 import android.app.Service
@@ -37,6 +36,8 @@ import io.chaldeaprjkt.gamespace.utils.isServiceRunning
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -60,13 +61,25 @@ class SessionService : Hilt_SessionService() {
     @Inject
     lateinit var callListener: CallListener
 
-    private val scope = CoroutineScope(Job() + Dispatchers.IO)
+    private val serviceJob = SupervisorJob()
+    private val scope = CoroutineScope(serviceJob + Dispatchers.IO)
 
     private val gameBarConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            isBarConnected = true
-            gameBar = (service as GameBarService.GameBarBinder).getService()
-            onGameBarReady()
+            try {
+                isBarConnected = true
+                val gameBarService = (service as? GameBarService.GameBarBinder)?.getService()
+                if (gameBarService == null) {
+                    Log.e(TAG, "Failed to get GameBarService")
+                    stopSelf()
+                    return
+                }
+                gameBar = gameBarService
+                onGameBarReady()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error in onServiceConnected", e)
+                stopSelf()
+            }
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -115,6 +128,7 @@ class SessionService : Hilt_SessionService() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        scope.cancel() // Cancel all coroutines
         callListener.destroy()
         screenUtils.stayAwake = false
         screenUtils.lockGesture = false
@@ -125,7 +139,14 @@ class SessionService : Hilt_SessionService() {
         }
         gameModeUtils.unbind()
         session.unregister()
-        unbindService(gameBarConnection)
+        if (isBarConnected) {
+            try {
+                unbindService(gameBarConnection)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error unbinding service", e)
+            }
+        }
+        serviceJob.cancel() // Cancel the supervisor job
         super.onDestroy()
     }
 
