@@ -63,16 +63,21 @@
             android:defaultValue="0"
             android:entries="@array/in_game_calls_entries"
             android:entryValues="@array/in_game_calls_values"
-            android:key="gamespace_calls_mode"
-            android:summary="%s"
+            android:key="calls_mode"
             android:title="@string/in_game_calls_title" />
 
+        <SeekBarPreference
+            android:defaultValue="0"
+            android:key="calls_delay"
+            android:max="10"
+            android:title="@string/in_game_calls_delay_title"
+            android:summary="@string/in_game_calls_delay_summary" />
+
         <ListPreference
-            android:defaultValue="3"
+            android:defaultValue="2"
             android:entries="@array/in_game_notifications_entries"
             android:entryValues="@array/in_game_notifications_values"
             android:key="gamespace_notifications_mode"
-            android:summary="%s"
             android:title="@string/in_game_notifications_title" />
 
         <ListPreference

@@ -28,6 +28,8 @@ import android.telecom.TelecomManager
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 import android.util.Log
+import android.os.Handler
+import android.os.Looper
 
 import androidx.core.app.ActivityCompat
 
@@ -41,6 +43,13 @@ import javax.inject.Inject
 
 import io.chaldeaprjkt.gamespace.R
 import io.chaldeaprjkt.gamespace.data.AppSettings
+import android.app.NotificationManager
+import android.app.NotificationChannel
+import android.app.Notification
+import android.content.ContentResolver
+import android.database.Cursor
+import android.net.Uri
+import android.provider.ContactsContract
 
 @ServiceScoped
 class CallListener @Inject constructor(
@@ -51,8 +60,14 @@ class CallListener @Inject constructor(
     private val audioManager = context.getSystemService(AudioManager::class.java)
     private val telephonyManager = context.getSystemService(TelephonyManager::class.java)
     private val telecomManager = context.getSystemService(TelecomManager::class.java)
+    private val notificationManager = context.getSystemService(NotificationManager::class.java)
 
     private val callsMode = appSettings.callsMode
+    private val callsDelay = appSettings.callsDelay
+    private val CHANNEL_ID = "gamespace_calls"
+    private val NOTIFICATION_ID = 1001
+    private val handler = Handler(Looper.getMainLooper())
+    private var pendingCallAction: Runnable? = null
 
     private val telephonyCallback = Callback()
 
@@ -63,9 +78,14 @@ class CallListener @Inject constructor(
     fun init() {
         executor = Executors.newSingleThreadExecutor()
         telephonyManager?.registerTelephonyCallback(executor!!, telephonyCallback)
+        createNotificationChannel()
     }
 
     fun destory() {
+        if (pendingCallAction != null) {
+            handler.removeCallbacks(pendingCallAction!!)
+            pendingCallAction = null
+        }
         telephonyManager?.unregisterTelephonyCallback(telephonyCallback)
         executor?.shutdownNow()
     }
@@ -92,21 +112,97 @@ class CallListener @Inject constructor(
         return true
     }
 
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Game Space Calls",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Notifications for auto-handled calls during gaming"
+            setSound(null, null)
+            enableVibration(false)
+        }
+        notificationManager?.createNotificationChannel(channel)
+    }
+
+    private fun getContactName(phoneNumber: String): String {
+        var contactName = phoneNumber
+        try {
+            val uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phoneNumber))
+            val projection = arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME)
+            context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    contactName = cursor.getString(0)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting contact name", e)
+        }
+        return contactName
+    }
+
+    private fun showCallNotification(phoneNumber: String, isAnswered: Boolean) {
+        val contactName = getContactName(phoneNumber)
+        val message = if (isAnswered) {
+            context.getString(R.string.in_game_calls_received_number, contactName)
+        } else {
+            context.getString(R.string.in_game_calls_rejected_number, contactName)
+        }
+
+        val notification = Notification.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(R.string.in_game_calls_title))
+            .setContentText(message)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager?.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun handleIncomingCall(number: String, autoAnswer: Boolean) {
+        if (pendingCallAction != null) {
+            handler.removeCallbacks(pendingCallAction!!)
+        }
+
+        pendingCallAction = Runnable {
+            if (autoAnswer) {
+                telecomManager?.acceptRingingCall()
+                showCallNotification(number, true)
+            } else {
+                telecomManager?.endCall()
+                showCallNotification(number, false)
+            }
+            pendingCallAction = null
+        }
+
+        if (callsDelay > 0) {
+            handler.postDelayed(pendingCallAction!!, callsDelay * 1000L)
+        } else {
+            pendingCallAction?.run()
+        }
+    }
+
     private inner class Callback : TelephonyCallback(), TelephonyCallback.CallStateListener {
         private var previousState = TelephonyManager.CALL_STATE_IDLE
         private var previousAudioMode = audioManager?.mode
+        private var incomingNumber: String? = null
 
         override fun onCallStateChanged(state: Int) {
             if (callsMode == 0) return
             when (state) {
                 TelephonyManager.CALL_STATE_RINGING -> {
                     if (!checkPermission()) return
-                    @Suppress("DEPRECATION")
-                    if (callsMode == 1) {
-                        telecomManager?.acceptRingingCall()
-                    } else {
-                        telecomManager?.endCall()
-                    }
+                    incomingNumber = telephonyManager?.callState?.let { 
+                        try {
+                            val method = TelephonyManager::class.java.getDeclaredMethod("getIncomingPhoneNumber")
+                            method.isAccessible = true
+                            method.invoke(telephonyManager) as String
+                        } catch (e: Exception) {
+                            "Unknown"
+                        }
+                    } ?: "Unknown"
+                    
+                    handleIncomingCall(incomingNumber!!, callsMode == 1)
                 }
                 TelephonyManager.CALL_STATE_OFFHOOK -> {
                     if (callsMode == 2) return
@@ -136,6 +232,10 @@ class CallListener @Inject constructor(
                             AudioSystem.FORCE_NONE
                         )
                         audioManager?.isSpeakerphoneOn = false
+                    }
+                    if (pendingCallAction != null) {
+                        handler.removeCallbacks(pendingCallAction!!)
+                        pendingCallAction = null
                     }
                 }
             }
