@@ -29,7 +29,7 @@ class GameSession @Inject constructor(
 ) {
 
     private val db by lazy { context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) }
-    private val audioManager by lazy { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    private val audioManager by lazy { context.getSystemService(AudioManager::class.java) }
 
     private var state
         get() = db.getString(KEY_SAVED_SESSION, "")
@@ -59,7 +59,7 @@ class GameSession @Inject constructor(
                 autoBrightness = systemSettings.autoBrightness,
                 threeScreenshot = systemSettings.threeScreenshot,
                 headsUp = systemSettings.headsUp,
-                ringerMode = audioManager.ringerModeInternal,
+                ringerMode = audioManager.ringerMode,
                 doubleTapToSleep = systemSettings.doubleTapToSleep,
                 fastChargeDisabler = systemSettings.fastChargeDisabler as? Boolean
             )
@@ -98,7 +98,7 @@ class GameSession @Inject constructor(
 
         // Handle ringer mode
         if (appSettings.ringerMode != 3) {
-            audioManager.ringerModeInternal = appSettings.ringerMode
+            audioManager.setRingerMode(appSettings.ringerMode)
         }
     }
 
@@ -120,7 +120,7 @@ class GameSession @Inject constructor(
             }
             orig.headsUp?.let { systemSettings.headsUp = it }
             if (appSettings.ringerMode != 3) {
-                audioManager.ringerModeInternal = orig.ringerMode
+                audioManager.setRingerMode(orig.ringerMode)
             }
             
             // Clear state and saved data
@@ -152,7 +152,7 @@ class GameSession @Inject constructor(
                     systemSettings.doubleTapToSleep = state.doubleTapToSleep ?: true
                     systemSettings.fastChargeDisabler = state.fastChargeDisabler ?: true
                     systemSettings.headsUp = state.headsUp ?: true
-                    audioManager.ringerModeInternal = state.ringerMode
+                    audioManager.setRingerMode(state.ringerMode)
                 }
             }
         } catch (e: Exception) {

@@ -66,12 +66,12 @@ class GameBarService : Hilt_GameBarService() {
     @Inject
     lateinit var gameOptimization: GameOptimizationManager
 
-    private val wm by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
+    private val wm by lazy { getSystemService(WindowManager::class.java) }
     private val handler by lazy { Handler(Looper.getMainLooper()) }
 
     private val barLayoutParam =
         WindowManager.LayoutParams(
-            WindowManager.LayoutParams.TYPE_SYSTEM_DIALOG,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                     or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                     or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,

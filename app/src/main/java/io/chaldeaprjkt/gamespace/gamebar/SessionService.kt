@@ -88,7 +88,8 @@ class SessionService : Hilt_SessionService() {
         } catch (e: RemoteException) {
             Log.d(TAG, e.toString())
         }
-        gameManager = getSystemService(Context.GAME_SERVICE) as GameManager
+        gameManager = getSystemService(GameManager::class.java)
+            ?: throw IllegalStateException("GameManager service not available")
         gameModeUtils.bind(gameManager)
     }
 
@@ -171,11 +172,8 @@ class SessionService : Hilt_SessionService() {
 
     private fun tryStartFromDeath(): Int {
         try {
-            val taskManager = ActivityTaskManager.getService()
-            if (taskManager == null) {
-                Log.e(TAG, "ActivityTaskManager service is null")
-                return START_NOT_STICKY
-            }
+            val taskManager = ActivityTaskManager.getInstance()
+                ?: throw IllegalStateException("ActivityTaskManager not available")
 
             val game = taskManager.focusedRootTaskInfo?.topActivity?.packageName
             if (game == null) {
