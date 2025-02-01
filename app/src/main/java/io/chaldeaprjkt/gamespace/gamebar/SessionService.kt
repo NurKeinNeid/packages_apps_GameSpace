@@ -195,7 +195,7 @@ class SessionService : Hilt_SessionService() {
             val taskManager = ActivityTaskManager.getInstance()
                 ?: throw IllegalStateException("ActivityTaskManager not available")
 
-            val game = taskManager.focusedRootTaskInfo?.topActivity?.packageName
+            val game = taskManager.getTasks(1).firstOrNull()?.topActivity?.packageName
             if (game == null) {
                 Log.e(TAG, "No focused activity found")
                 return START_NOT_STICKY
@@ -206,7 +206,9 @@ class SessionService : Hilt_SessionService() {
                 return START_NOT_STICKY
             }
 
-            commandIntent = Intent(START).putExtra(EXTRA_PACKAGE_NAME, game)
+            commandIntent = Intent(START).also { 
+                it.putExtra(EXTRA_PACKAGE_NAME, game as String?)
+            }
             startGameBar()
             return START_STICKY
         } catch (e: Exception) {

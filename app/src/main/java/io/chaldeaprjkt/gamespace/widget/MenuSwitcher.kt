@@ -15,6 +15,7 @@ import io.chaldeaprjkt.gamespace.utils.entryPointOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -75,7 +76,7 @@ class MenuSwitcher @JvmOverloads constructor(
     private fun updateFrameRateBinding() {
         try {
             if (showFps) {
-                taskManager?.focusedRootTaskInfo?.taskId?.let { taskId ->
+                taskManager?.getTasks(1)?.firstOrNull()?.taskId?.let { taskId ->
                     wm.registerTaskFpsCallback(taskId, Runnable::run, taskFpsCallback)
                 }
             } else {
@@ -113,12 +114,6 @@ class MenuSwitcher @JvmOverloads constructor(
         } catch (e: Exception) {
             // Ignore any errors during cleanup
         }
-        scope.launch {
-            try {
-                scope.coroutineContext[Job]?.cancelChildren()
-            } catch (e: Exception) {
-                // Ignore cancellation errors
-            }
-        }
+        scope.cancel() // Cancel the entire scope
     }
 }
