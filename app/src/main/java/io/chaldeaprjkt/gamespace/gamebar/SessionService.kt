@@ -80,13 +80,12 @@ class SessionService : Hilt_SessionService() {
     private lateinit var gameManager: GameManager
     private var isBarConnected = false
 
-    @SuppressLint("WrongConstant")
     override fun onCreate() {
         super.onCreate()
         try {
             screenUtils.bind()
         } catch (e: RemoteException) {
-            Log.d(TAG, e.toString())
+            Log.e(TAG, "Failed to bind screen utils", e)
         }
         gameManager = getSystemService(GameManager::class.java)
             ?: throw IllegalStateException("GameManager service not available")
