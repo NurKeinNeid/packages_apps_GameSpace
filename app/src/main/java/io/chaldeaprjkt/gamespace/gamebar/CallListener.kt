@@ -81,7 +81,7 @@ class CallListener @Inject constructor(
         createNotificationChannel()
     }
 
-    fun destory() {
+    fun destroy() {
         if (pendingCallAction != null) {
             handler.removeCallbacks(pendingCallAction!!)
             pendingCallAction = null

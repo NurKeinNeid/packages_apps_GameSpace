@@ -115,15 +115,17 @@ class SessionService : Hilt_SessionService() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        callListener.destory()
-
-        if (isBarConnected) {
-            gameBar.onGameLeave()
-            unbindService(gameBarConnection)
+        callListener.destroy()
+        screenUtils.stayAwake = false
+        screenUtils.lockGesture = false
+        try {
+            screenUtils.unbind()
+        } catch (e: RemoteException) {
+            Log.e(TAG, "Failed to unbind screen utils", e)
         }
-        session.unregister()
         gameModeUtils.unbind()
-        screenUtils.unbind()
+        session.unregister()
+        unbindService(gameBarConnection)
         super.onDestroy()
     }
 

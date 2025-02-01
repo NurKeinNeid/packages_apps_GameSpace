@@ -17,6 +17,7 @@ package io.chaldeaprjkt.gamespace.data
 
 import android.content.Context
 import android.media.AudioManager
+import android.util.Log
 import com.google.gson.Gson
 import javax.inject.Inject
 
@@ -101,60 +102,68 @@ class GameSession @Inject constructor(
         }
     }
 
-    private fun restorePreviousState() {
-        db.getString(KEY_PREVIOUS_STATE, null)?.let { previousStateJson ->
-            try {
-                val previousState = gson.fromJson(previousStateJson, SessionState::class.java)
-                previousState.autoBrightness?.let {
-                    systemSettings.autoBrightness = it
-                }
-                previousState.threeScreenshot?.let {
-                    systemSettings.threeScreenshot = it
-                }
-                previousState.headsUp?.let {
-                    systemSettings.headsUp = it
-                }
-                previousState.ringerMode?.let {
-                    audioManager.ringerModeInternal = it
-                }
-                previousState.doubleTapToSleep?.let {
-                    systemSettings.doubleTapToSleep = it
-                }
-                previousState.fastChargeDisabler?.let {
-                    systemSettings.fastChargeDisabler = it
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
     fun unregister() {
-        val orig = state?.copy() ?: return
-        if (appSettings.noAutoBrightness) {
-            orig.autoBrightness?.let { systemSettings.autoBrightness = it }
+        try {
+            val orig = state?.copy() ?: return
+            // Restore all settings in a safe manner
+            if (appSettings.noAutoBrightness) {
+                orig.autoBrightness?.let { systemSettings.autoBrightness = it }
+            }
+            if (appSettings.noThreeScreenshot) {
+                orig.threeScreenshot?.let { systemSettings.threeScreenshot = it }
+            }
+            if (appSettings.doubleTaptoSleep) {
+                orig.doubleTapToSleep?.let { systemSettings.doubleTapToSleep = it }
+            }
+            if (appSettings.fastChargeDisabler) {
+                orig.fastChargeDisabler?.let { systemSettings.fastChargeDisabler = it }
+            }
+            orig.headsUp?.let { systemSettings.headsUp = it }
+            if (appSettings.ringerMode != 3) {
+                audioManager.ringerModeInternal = orig.ringerMode
+            }
+            
+            // Clear state and saved data
+            state = null
+            db.edit().remove(KEY_PREVIOUS_STATE).apply()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during unregister", e)
+            // Attempt to restore previous state even in case of error
+            restorePreviousState()
         }
-        if (appSettings.noThreeScreenshot) {
-            orig.threeScreenshot?.let { systemSettings.threeScreenshot = it }
-        }
-        if (appSettings.doubleTaptoSleep) {
-            orig.doubleTapToSleep?.let{ systemSettings.doubleTapToSleep = it }
-        }
-        if (appSettings.fastChargeDisabler) {
-            orig.fastChargeDisabler?.let { systemSettings.fastChargeDisabler = it }
-        }
-        orig.headsUp?.let { systemSettings.headsUp = it }
-        if (appSettings.ringerMode != 3) {
-            audioManager.ringerModeInternal = orig.ringerMode
-        }
-        state = null
     }
 
     fun finalize() {
-        unregister()
+        try {
+            unregister()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error during finalize", e)
+        }
+    }
+
+    private fun restorePreviousState() {
+        try {
+            val previousStateJson = db.getString(KEY_PREVIOUS_STATE, null)
+            if (previousStateJson != null) {
+                val previousState = gson.fromJson(previousStateJson, SessionState::class.java)
+                previousState?.let { state ->
+                    systemSettings.autoBrightness = state.autoBrightness ?: true
+                    systemSettings.threeScreenshot = state.threeScreenshot ?: true
+                    systemSettings.doubleTapToSleep = state.doubleTapToSleep ?: true
+                    systemSettings.fastChargeDisabler = state.fastChargeDisabler ?: true
+                    systemSettings.headsUp = state.headsUp ?: true
+                    audioManager.ringerModeInternal = state.ringerMode
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error restoring previous state", e)
+        } finally {
+            db.edit().remove(KEY_PREVIOUS_STATE).apply()
+        }
     }
 
     companion object {
+        private const val TAG = "GameSession"
         const val PREFS_NAME = "persisted_session"
         const val KEY_SAVED_SESSION = "session"
         private const val KEY_PREVIOUS_STATE = "previous_state"
