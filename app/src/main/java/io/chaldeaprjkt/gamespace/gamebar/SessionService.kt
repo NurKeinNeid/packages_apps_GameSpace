@@ -192,10 +192,19 @@ class SessionService : Hilt_SessionService() {
 
     private fun tryStartFromDeath(): Int {
         try {
-            val taskManager = ActivityTaskManager.getInstance()
-                ?: throw IllegalStateException("ActivityTaskManager not available")
+            val taskManager = ActivityTaskManager.getService()
+            if (taskManager == null) {
+                Log.e(TAG, "ActivityTaskManager service is null")
+                return START_NOT_STICKY
+            }
 
-            val game = taskManager.getTasks(1).firstOrNull()?.topActivity?.packageName
+            val tasks = taskManager.getTasks(1)
+            if (tasks.isEmpty()) {
+                Log.d(TAG, "No tasks found")
+                return START_NOT_STICKY
+            }
+
+            val game = tasks[0].topActivity?.packageName
             if (game == null) {
                 Log.e(TAG, "No focused activity found")
                 return START_NOT_STICKY
@@ -206,9 +215,7 @@ class SessionService : Hilt_SessionService() {
                 return START_NOT_STICKY
             }
 
-            commandIntent = Intent(START).also { 
-                it.putExtra(EXTRA_PACKAGE_NAME, game as String?)
-            }
+            commandIntent = Intent(START).putExtra(EXTRA_PACKAGE_NAME, game)
             startGameBar()
             return START_STICKY
         } catch (e: Exception) {

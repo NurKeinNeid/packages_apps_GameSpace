@@ -131,6 +131,7 @@ class SystemSettings @Inject constructor(
             mFastCharge?.isEnabled() ?: true
         } catch (e: RemoteException) {
             Log.e(TAG, "Failed to get fast charge state", e)
+            true
         }
         set(it) {
             try {
@@ -139,5 +140,6 @@ class SystemSettings @Inject constructor(
                 Log.e(TAG, "Failed to disable fast charge", e)
             }
         }
+
     private fun Boolean.toInt() = if (this) 1 else 0
 }
