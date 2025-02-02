@@ -59,7 +59,7 @@ class GameSession @Inject constructor(
                 autoBrightness = systemSettings.autoBrightness,
                 threeScreenshot = systemSettings.threeScreenshot,
                 headsUp = systemSettings.headsUp,
-                ringerMode = audioManager.ringerMode,
+                ringerMode = audioManager.ringerModeInternal,
                 doubleTapToSleep = systemSettings.doubleTapToSleep,
                 fastChargeDisabler = systemSettings.fastChargeDisabler as? Boolean
             )
@@ -98,7 +98,7 @@ class GameSession @Inject constructor(
 
         // Handle ringer mode
         if (appSettings.ringerMode != 3) {
-            audioManager.setRingerMode(appSettings.ringerMode)
+            audioManager.ringerModeInternal = appSettings.ringerMode
         }
     }
 
@@ -120,7 +120,7 @@ class GameSession @Inject constructor(
             }
             orig.headsUp?.let { systemSettings.headsUp = it }
             if (appSettings.ringerMode != 3) {
-                audioManager.setRingerMode(orig.ringerMode)
+                audioManager.ringerModeInternal = orig.ringerMode
             }
             
             // Clear state and saved data
@@ -142,23 +142,30 @@ class GameSession @Inject constructor(
     }
 
     private fun restorePreviousState() {
-        try {
-            val previousStateJson = db.getString(KEY_PREVIOUS_STATE, null)
-            if (previousStateJson != null) {
+        db.getString(KEY_PREVIOUS_STATE, null)?.let { previousStateJson ->
+            try {
                 val previousState = gson.fromJson(previousStateJson, SessionState::class.java)
-                previousState?.let { state ->
-                    systemSettings.autoBrightness = state.autoBrightness ?: true
-                    systemSettings.threeScreenshot = state.threeScreenshot ?: true
-                    systemSettings.doubleTapToSleep = state.doubleTapToSleep ?: true
-                    systemSettings.fastChargeDisabler = state.fastChargeDisabler ?: true
-                    systemSettings.headsUp = state.headsUp ?: true
-                    audioManager.setRingerMode(state.ringerMode)
+                previousState.autoBrightness?.let {
+                    systemSettings.autoBrightness = it
                 }
+                previousState.threeScreenshot?.let {
+                    systemSettings.threeScreenshot = it
+                }
+                previousState.headsUp?.let {
+                    systemSettings.headsUp = it
+                }
+                previousState.ringerMode?.let {
+                    audioManager.ringerModeInternal = it
+                }
+                previousState.doubleTapToSleep?.let {
+                    systemSettings.doubleTapToSleep = it
+                }
+                previousState.fastChargeDisabler?.let {
+                    systemSettings.fastChargeDisabler = it
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error restoring previous state", e)
-        } finally {
-            db.edit().remove(KEY_PREVIOUS_STATE).apply()
         }
     }
 
