@@ -108,7 +108,11 @@ class SettingsFragment : Hilt_SettingsFragment(), Preference.OnPreferenceChangeL
             isChecked = settings.suppressFullscreenIntent
             onPreferenceChangeListener = this@SettingsFragment
         }
+    }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
         findPreference<SwitchPreferenceCompat>(AppSettings.KEY_FAST_CHARGE_DISABLER)?.apply {
             setOnPreferenceChangeListener { preference, newValue ->
                 val isChecked = newValue as Boolean
