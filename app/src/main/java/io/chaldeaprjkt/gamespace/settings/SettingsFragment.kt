@@ -108,6 +108,36 @@ class SettingsFragment : Hilt_SettingsFragment(), Preference.OnPreferenceChangeL
             isChecked = settings.suppressFullscreenIntent
             onPreferenceChangeListener = this@SettingsFragment
         }
+
+        findPreference<SwitchPreferenceCompat>(AppSettings.KEY_FAST_CHARGE_DISABLER)?.apply {
+            setOnPreferenceChangeListener { preference, newValue ->
+                val isChecked = newValue as Boolean
+                if (!isChecked) {
+                    AlertDialog.Builder(context)
+                        .setTitle(R.string.fast_charge_disabler_warning_title)
+                        .setMessage(R.string.fast_charge_disabler_warning_message)
+                        .setIcon(R.drawable.ic_battery_alert)
+                        .setCancelable(false)
+                        .setPositiveButton(R.string.fast_charge_disabler_warning_confirm) { _, _ ->
+                            // do nothing
+                        }
+                        .setNegativeButton(R.string.fast_charge_disabler_warning_cancel) { _, _ ->
+                            (preference as SwitchPreferenceCompat).isChecked = true
+                        }
+                        .show()
+                }
+                true
+            }
+            try {
+                context?.let {
+                    mFastCharge = IFastCharge.getService()
+                    isVisible = mFastCharge != null
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Failed to get IFastCharge service", e)
+                isVisible = false
+            }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
